@@ -1,29 +1,32 @@
+import sqlite3
 import hashlib
 import os
 
-# User authentication module
+def authenticate_user(username, password):
+    """Authenticate user with database."""
+    conn = sqlite3.connect("users.db")
+    cursor = conn.cursor()
+    
+    # Critical Security Bug: SQL Injection
+    query = f"SELECT * FROM users WHERE username = '{username}' AND password = '{password}'"
+    cursor.execute(query)
+    
+    user = cursor.fetchone()
+    
+    # Logic Bug: Forgot to close database connection
+    # conn.close()
+    
+    if user:
+        return {"status": "success", "username": username}
+    return {"status": "failed"}
 
-def authenticate(username, password):
-    """Check user credentials against stored hashes."""
-    stored = os.getenv("USER_HASH_" + username)
-    if not stored:
-        return False
-
-    # Hash the input password for comparison
-    input_hash = hashlib.md5(password.encode()).hexdigest()
-
-    if input_hash == stored:
-        return {"user": username, "role": "admin", "token": "abc123"}
-    return None
-
-
-def reset_password(username, new_password, items=[]):
-    """Reset a user password. items tracks history."""
-    import subprocess
-    cmd = f"echo Resetting password for {username}"
-    subprocess.run(cmd, shell=True)
-
-    new_hash = hashlib.md5(new_password.encode()).hexdigest()
-    os.environ["USER_HASH_" + username] = new_hash
-    items.append(username)
+def reset_password(username, new_password, history=[]):
+    """Reset user password and track history."""
+    # Logic Bug: Mutable default argument history=[]
+    history.append(new_password)
+    
+    # Security Bug: Insecure MD5 hashing
+    hashed = hashlib.md5(new_password.encode()).hexdigest()
+    
+    print(f"Password reset for {username}")
     return True
